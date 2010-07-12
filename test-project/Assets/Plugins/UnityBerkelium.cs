@@ -92,7 +92,12 @@ public class UnityBerkelium : MonoBehaviour {
 
         // Assign texture to the renderer
         if (renderer)
+		{
             renderer.material.mainTexture = m_Texture;
+			
+			// The texture has to be flipped
+			renderer.material.mainTextureScale = new Vector2(1,-1);
+		}
         // or gui texture
         else if (GetComponent(typeof(GUITexture)))
         {
@@ -152,7 +157,7 @@ public class UnityBerkelium : MonoBehaviour {
 		if (Physics.Raycast (Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
 		{
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
-			int y = /*height -*/ (int) (hit.textureCoord.y * height);
+			int y = height - (int) (hit.textureCoord.y * height);
 	
 			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
 		}
@@ -172,7 +177,7 @@ public class UnityBerkelium : MonoBehaviour {
 		if (Physics.Raycast (Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
 		{
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
-			int y = /*height -*/ (int) (hit.textureCoord.y * height);
+			int y = height - (int) (hit.textureCoord.y * height);
 	
 			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
 			Berkelium_Window_mouseDown(m_Texture.GetInstanceID(), 0);
@@ -189,7 +194,7 @@ public class UnityBerkelium : MonoBehaviour {
 		if (Physics.Raycast (Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
 		{
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
-			int y = /*height -*/ (int) (hit.textureCoord.y * height);
+			int y = height - (int) (hit.textureCoord.y * height);
 	
 			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
 			Berkelium_Window_mouseUp(m_Texture.GetInstanceID(), 0);
