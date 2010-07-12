@@ -1,0 +1,12 @@
+2010-07-05:
+- Initial version
+- No dirty rectangle implementation yet
+- No keyboard input yet
+
+2010-07-06:
+- Fly around with the right mouse button pressed (very simple fly script)
+- Interaction can be enabled/disabled per object
+
+2010-07-07:
+- Only update texture when it is dirty (still updating full texture)
+- Character input (no other keys yet)

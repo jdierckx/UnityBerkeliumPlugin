@@ -1,0 +1,38 @@
+The Unity Berkelium Plugin
+--------------------------
+
+This plugin wraps Berkelium (http://berkelium.org) into a thin C layer, and provides a C# script that can be attached to Unity objects.
+
+A couple of notes:
+
+- This is a plugin using native code, so it only works with Unity Pro, and it doesn't work inside a browser.
+
+- If you want to get this working in the Unity (Pro) editor, copy all files from "berkelium/bin" to your Unity editor directory (defaults to "C:\Program Files (x86)\Unity\Editor" in Windows 7). I know this is a dirty hack, but that's the only way I could get it to work. If anyone knows a better way, please let me know!
+
+- There is a test project in "test-project/Assets/BerkeliumUnityTest.unity". It contains a plane with the script attached. You can edit the width and height and the URL.
+
+- The URL has to start with a protocol (http:// for example). I don't know why it doesn't work without it.
+
+- When you want mouse events to work, your object needs a mesh collider (or needs to be a GUI texture).
+
+- There is a log file in "test-project" (when using the Unity editor).
+
+- When you release a project, you must copy all files from "berkelium/bin" to your executable's directory. In the test release, I stripped as many files as possible.
+
+- I am developing this plugin as part of the Flemish (Belgian) OSMA project (http://osma.phl.be/). The research project focuses on open game development.
+
+- I release this code under the same license as Berkelium itself, which is a BSD-style license. See the LICENSE file.
+
+
+Known issues:
+- There seems to be some problem with mouse events
+- Keyboard events aren't working yet
+- Scrolling isn't supported yet. This is handled seperately in Berkelium (solution almost ready).
+- The texture is inverted. You can set the X scale of the Transform to -1 (like in the example), but I am looking for a better solution
+- Rendering is very slow. I am still uploading the whole texture each frame (solution almost ready)
+
+Have fun!
+
+
+Greetz,
+Jeroen Dierckx
