@@ -58,34 +58,7 @@ void UnityBerkeliumWindow::onPaint(Berkelium::Window *pWindow, const unsigned ch
 	//! @todo How are we going to handle scrolling?
 	m_dirtyRects.push_back(rect);
 
-	// Full draw
-	if(rect.left() == 0 && rect.top() == 0 && rect.right() == m_width && rect.bottom() == m_height)
-	{
-		cerr << "  doing full repaint" << endl;
-		//::memcpy(m_buffer, sourceBuffer, m_width * m_height * 4);
-
-		/*unsigned int num = m_width * m_height * 4;
-		for(unsigned int i = 0; i < num; ++i)
-			m_buffer[i] = sourceBuffer[i] / 255.0f;*/
-
-		// Note: we need to convert from BGRA to ARGB, so wee need to loop through the pixels
-		for(int x = 0; x < m_width; ++x)
-		{
-			for(int y = 0; y < m_height; ++y)
-			{
-				int idx = y * m_width + x; 
-				
-				m_buffer[4 * idx + 0] = sourceBuffer[4 * idx + 2] / 255.0f; // R
-				m_buffer[4 * idx + 1] = sourceBuffer[4 * idx + 1] / 255.0f; // G
-				m_buffer[4 * idx + 2] = sourceBuffer[4 * idx + 0] / 255.0f; // B
-				m_buffer[4 * idx + 3] = sourceBuffer[4 * idx + 3] / 255.0f; // A
-			}
-		}
-
-		return;
-	}
-
-	// Scrolling
+	//! @todo Scrolling
 	if(dx != 0 || dy != 0)
 	{
 	}
