@@ -69,6 +69,9 @@ public class UnityBerkelium : MonoBehaviour {
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_keyEvent(int windowID, bool pressed, int mods, int vk_code, int scancode);
 	
+	[DllImport ("UnityBerkeliumPlugin")]
+	private static extern void Berkelium_Window_executeJavascript(int windowID, string javascript);
+	
 
     void Start () {
 		

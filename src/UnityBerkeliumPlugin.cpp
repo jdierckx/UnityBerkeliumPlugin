@@ -171,3 +171,25 @@ PLUGIN_API void Berkelium_Window_keyEvent(int windowID, bool pressed, int mods, 
 	else
 		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
+
+/// Thanks to agentdm
+PLUGIN_API void Berkelium_Window_executeJavascript(int windowID, char* javaScript)
+{
+	cerr << "Javascript call made: " << javaScript << endl;
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+
+	size_t scriptLength = ::strlen(javaScript);
+
+	// Convert to Wchar ( is there an easier way to do this? )
+	const int strlength = 100;
+	wchar_t wctStrJScript[strlength];
+	MultiByteToWideChar( CP_ACP, 0, javaScript, scriptLength, wctStrJScript, strlength);
+	wctStrJScript[scriptLength] = 0;
+
+	std::wcerr << "Javascript converted: " << wctStrJScript << endl;
+
+	if(pWindow)
+		pWindow->getBerkeliumWindow()->executeJavascript(wctStrJScript, scriptLength);
+	else
+		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
+}
