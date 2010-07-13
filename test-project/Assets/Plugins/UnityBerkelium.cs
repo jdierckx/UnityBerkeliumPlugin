@@ -214,11 +214,21 @@ public class UnityBerkelium : MonoBehaviour {
 			// Insert character
 			Berkelium_Window_textEvent(m_TextureID, Event.current.character);
 			
-			/*bool pressed = (Event.current.type == EventType.KeyDown);
-			int mods = 0;
+			KeyCode key = Event.current.keyCode;
+			bool pressed = (Event.current.type == EventType.KeyDown);
+			
+			// Special case for backspace
+			if(key == KeyCode.Backspace)
+				Berkelium_Window_keyEvent(m_TextureID, pressed, 0, 08, 0);
+			// Special case for enter
+			else if(key == KeyCode.Return)
+				Berkelium_Window_keyEvent(m_TextureID, pressed, 0, 13, 0);
+			
+			// TODO Handle all keys
+			/*int mods = 0;
 			int vk_code = convertKeyCode(Event.current.keyCode);
-			int scancode = convertKeyCode(Event.current.keyCode);
-			//Berkelium_Window_keyEvent(m_TextureID, pressed, mods, vk_code, scancode);
+			int scancode = 0;
+			Berkelium_Window_keyEvent(m_TextureID, pressed, mods, vk_code, scancode);
 			print("Key event: " + pressed + ", " + Event.current.keyCode);*/
 		}
 	}
