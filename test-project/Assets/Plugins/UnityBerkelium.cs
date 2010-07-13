@@ -20,6 +20,7 @@ public class UnityBerkelium : MonoBehaviour {
     private Texture2D m_Texture;
     private Color[] m_Pixels;
     private GCHandle m_PixelsHandle;
+	private int m_TextureID;
         
 	// A rectangle
 	struct Rect
@@ -49,10 +50,10 @@ public class UnityBerkelium : MonoBehaviour {
 
 	// TEMP
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern bool Berkelium_Window_clearDirty(int windowID);
-	
-	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern Rect[] Berkelium_Window_getUpdates(int windowID);
+	private static extern void Berkelium_Window_clearDirty(int windowID);
+
+	/*[DllImport ("UnityBerkeliumPlugin")]
+	private static extern Rect[] Berkelium_Window_getUpdates(int windowID);*/
 
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_mouseDown(int windowID, int button);
@@ -64,7 +65,7 @@ public class UnityBerkelium : MonoBehaviour {
 	private static extern void Berkelium_Window_mouseMove(int windowID, int x, int y);
 	
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern void Berkelium_Window_character(int windowID, char c);
+	private static extern void Berkelium_Window_textEvent(int windowID, char c);
 	
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_keyEvent(int windowID, bool pressed, int mods, int vk_code, int scancode);
@@ -85,6 +86,9 @@ public class UnityBerkelium : MonoBehaviour {
         // "pin" the array in memory, so we can pass direct pointer to it's data to the plugin,
         // without costly marshaling of array of structures.
         m_PixelsHandle = GCHandle.Alloc(m_Pixels, GCHandleType.Pinned);
+		
+		// Save the texture ID
+		m_TextureID = m_Texture.GetInstanceID();
 		
 		// Improve rendering at shallow angles
 		m_Texture.filterMode = FilterMode.Trilinear;
@@ -110,13 +114,13 @@ public class UnityBerkelium : MonoBehaviour {
         }
 		
 		// Create new web window
-		Berkelium_Window_create(m_Texture.GetInstanceID(), m_PixelsHandle.AddrOfPinnedObject(), width,height, url);
-		print("Created new web window: " + m_Texture.GetInstanceID());
+		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), width,height, url);
+		print("Created new web window: " + m_TextureID);
     }
     
     void OnDisable() {
 		// Destroy the web window
-		Berkelium_Window_destroy(m_Texture.GetInstanceID());
+		Berkelium_Window_destroy(m_TextureID);
 		
         // Free the pinned array handle.
         m_PixelsHandle.Free();
@@ -127,19 +131,21 @@ public class UnityBerkelium : MonoBehaviour {
 
     // Now we can simply call UpdateTexture which gets routed directly into the plugin
     void Update () {
+		
 		// Update Berkelium
+		// TODO This only has to be done once in stead of per object
 		Berkelium_update();
 	
 		// Apply the changed pixels
 		// TODO Ask Berkelium for the dirty rectangle and only set those pixels
-		if(Berkelium_Window_isDirty(m_Texture.GetInstanceID()))
+		if(Berkelium_Window_isDirty(m_TextureID))
 		{
 			// TEMP Make sure the dirty rectangles are cleared
-			Berkelium_Window_clearDirty(m_Texture.GetInstanceID());
+			Berkelium_Window_clearDirty(m_TextureID);
 			
 			m_Texture.SetPixels (m_Pixels, 0);
 			m_Texture.Apply ();
-			print("Updated texture");
+			//print("Updated texture");
 		}
     }
 	
@@ -159,7 +165,7 @@ public class UnityBerkelium : MonoBehaviour {
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
 			int y = height - (int) (hit.textureCoord.y * height);
 	
-			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
+			Berkelium_Window_mouseMove(m_TextureID, x, y);
 		}
 	}
 	
@@ -179,8 +185,8 @@ public class UnityBerkelium : MonoBehaviour {
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
 			int y = height - (int) (hit.textureCoord.y * height);
 	
-			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
-			Berkelium_Window_mouseDown(m_Texture.GetInstanceID(), 0);
+			Berkelium_Window_mouseMove(m_TextureID, x, y);
+			Berkelium_Window_mouseDown(m_TextureID, 0);
 		}
 	}
 	
@@ -196,8 +202,8 @@ public class UnityBerkelium : MonoBehaviour {
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
 			int y = height - (int) (hit.textureCoord.y * height);
 	
-			Berkelium_Window_mouseMove(m_Texture.GetInstanceID(), x, y);
-			Berkelium_Window_mouseUp(m_Texture.GetInstanceID(), 0);
+			Berkelium_Window_mouseMove(m_TextureID, x, y);
+			Berkelium_Window_mouseUp(m_TextureID, 0);
 		}
 	}
 	
@@ -205,14 +211,15 @@ public class UnityBerkelium : MonoBehaviour {
 	{
 		if(Event.current.isKey)
 		{
-			Berkelium_Window_character(m_Texture.GetInstanceID(), Event.current.character);
+			// Insert character
+			Berkelium_Window_textEvent(m_TextureID, Event.current.character);
 			
-			bool pressed = (Event.current.type == EventType.KeyDown);
+			/*bool pressed = (Event.current.type == EventType.KeyDown);
 			int mods = 0;
 			int vk_code = convertKeyCode(Event.current.keyCode);
 			int scancode = convertKeyCode(Event.current.keyCode);
-			//Berkelium_Window_keyEvent(m_Texture.GetInstanceID(), pressed, mods, vk_code, scancode);
-			print("Key event: " + pressed + ", " + Event.current.keyCode);
+			//Berkelium_Window_keyEvent(m_TextureID, pressed, mods, vk_code, scancode);
+			print("Key event: " + pressed + ", " + Event.current.keyCode);*/
 		}
 	}
 	

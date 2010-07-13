@@ -26,9 +26,9 @@ UnityBerkeliumWindow *getWindow(int id)
 }
 
 
-/********************
-* Exposed functions *
-********************/
+/*******************
+* Global functions *
+*******************/
 
 PLUGIN_API void Berkelium_init()
 {
@@ -70,7 +70,12 @@ PLUGIN_API void Berkelium_update()
 	Berkelium::update();
 }
 
-PLUGIN_API bool Berkelium_Window_create(int uniqueID, void *colors, int width, int height, char *url)
+
+/****************************
+* Window-specific functions *
+****************************/
+
+PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, int width, int height, char *url)
 {
 	if(windows.find(uniqueID) != windows.end())
 	{
@@ -78,13 +83,11 @@ PLUGIN_API bool Berkelium_Window_create(int uniqueID, void *colors, int width, i
 		return false;
 	}
 
-	// Unity uses floats for colors
-	float *data = reinterpret_cast<float *>(colors);
-
-	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, data, width, height, url);
+	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, width, height, url);
 
 	cerr << "Berkelium window created: " << pWindow << " (size=" << width << ", " << height << "; url=" << url << ")" << endl;
 	windows[uniqueID] = pWindow;
+
 	return true;
 }
 
@@ -115,7 +118,10 @@ PLUGIN_API void Berkelium_Window_clearDirty(int windowID)
 {
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
-		return pWindow->clearDirty();
+	{
+		// We clear the dirty flag. It will be set again in the Berkelium update callbacks
+		pWindow->clearDirty();
+	}
 	else
 		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
@@ -154,7 +160,7 @@ PLUGIN_API void Berkelium_Window_mouseMove(int windowID, int x, int y)
 		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
 
-PLUGIN_API void Berkelium_Window_character(int windowID, wchar_t c)
+PLUGIN_API void Berkelium_Window_textEvent(int windowID, wchar_t c)
 {
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
