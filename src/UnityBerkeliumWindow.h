@@ -53,6 +53,8 @@ protected:
 	virtual void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *wid, int newWidth,int newHeight);
 	virtual void onWidgetMove(Berkelium::Window *win, Berkelium::Widget *wid, int newX, int newY);
 	virtual void onWidgetPaint(Berkelium::Window *win, Berkelium::Widget *wid, const unsigned char *sourceBuffer, const Berkelium::Rect &rect,int dx, int dy, const Berkelium::Rect &scrollRect);
+	virtual void onCursorUpdated(const Berkelium::Cursor& newCursor);
+	virtual void onShowContextMenu(Berkelium::Window *win, const Berkelium::ContextMenuEventArgs& args);
 
 	// Member variables
 	Berkelium::Window *m_pWindow;

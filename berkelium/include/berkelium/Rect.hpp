@@ -66,6 +66,20 @@ struct Rect {
         ret.mHeight = rb-ry;
         return ret;
     }
+
+    /** Create a new Rect equivalent to this Rect translated by the specified
+     *  amounts in either direction.
+     *  \param dx amount to translate along the X axis
+     *  \param dy amount to translate along the Y axis
+     *  \returns a new translated Rect
+     */
+    Rect translate(int dx, int dy) const {
+        Rect ret = *this;
+        ret.mLeft += dx;
+        ret.mTop += dy;
+        return ret;
+    }
+
 private:
     static int rectmax(int a, int b) {
         return a>b?a:b;

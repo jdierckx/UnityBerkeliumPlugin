@@ -1,1 +1,1 @@
-Downloaded and unpacked from http://sirikatawin32.googlecode.com/svn/trunk/berkelium.zip
+Downloaded and unpacked from http://github.com/downloads/sirikata/berkelium/berkelium_49000_vc9_2010-06-20.7z

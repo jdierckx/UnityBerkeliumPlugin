@@ -162,7 +162,17 @@ void UnityBerkeliumWindow::onWidgetPaint(Berkelium::Window *win, Berkelium::Widg
 	cerr << "[UnityBerkeliumWindow] onWidgetPaint called (widget: " << wid << ")" << endl;
 }
 
-	
+void UnityBerkeliumWindow::onCursorUpdated(const Berkelium::Cursor& newCursor)
+{
+	cerr << "[UnityBerkeliumWindow] onCursorUpdated called" << endl;
+}
+
+void UnityBerkeliumWindow::onShowContextMenu(Berkelium::Window *win, const Berkelium::ContextMenuEventArgs& args)
+{
+	cerr << "[UnityBerkeliumWindow] onShowContextMenu called (window: " << win << ")" << endl;
+}
+
+
 /**********************
 * Protected functions *
 **********************/
