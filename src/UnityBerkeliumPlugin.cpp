@@ -75,7 +75,7 @@ PLUGIN_API void Berkelium_update()
 * Window-specific functions *
 ****************************/
 
-PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transparency, int width, int height, char *url)
+PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transparency, int width, int height, char *url, UnityBerkeliumWindow::PaintFunc paintFunc)
 {
 	if(windows.find(uniqueID) != windows.end())
 	{
@@ -83,7 +83,7 @@ PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transp
 		return false;
 	}
 
-	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, transparency, width, height, url);
+	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, transparency, width, height, url, paintFunc);
 
 	cerr << "Berkelium window created: " << pWindow << " (size=" << width << ", " << height << "; url=" << url << ")" << endl;
 	windows[uniqueID] = pWindow;
@@ -101,37 +101,19 @@ PLUGIN_API void Berkelium_Window_destroy(int windowID)
 	}
 }
 
-PLUGIN_API bool Berkelium_Window_isDirty(int windowID)
+// Note: we need this function because I can't get parameters in function pointers to work properly
+PLUGIN_API Berkelium::Rect Berkelium_Window_getLastDirtyRect(int windowID)
 {
+	Berkelium::Rect result;
+
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
-		return pWindow->isDirty();
-	else
-	{
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
-		return false;
-	}
-}
-
-// TEMP
-PLUGIN_API void Berkelium_Window_clearDirty(int windowID)
-{
-	UnityBerkeliumWindow *pWindow = getWindow(windowID);
-	if(pWindow)
-	{
-		// We clear the dirty flag. It will be set again in the Berkelium update callbacks
-		pWindow->clearDirty();
-	}
+		result = pWindow->getLastDirtyRect();
 	else
 		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
-}
-
-/*PLUGIN_API Berkelium::Rect[] Berkelium_Window_getUpdates(int windowID)
-{
-	RectVector result =;
 
 	return result;
-}*/
+}
 
 PLUGIN_API void Berkelium_Window_mouseDown(int windowID, int button)
 {

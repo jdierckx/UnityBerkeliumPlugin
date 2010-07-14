@@ -14,8 +14,8 @@
 * Constructors and destructor *
 ******************************/
 
-UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url)
-: m_id(uniqueID), m_buffer(buffer), m_transparency(transparency), m_width(width), m_height(height), m_url(url)
+UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url, PaintFunc paintFunc)
+: m_id(uniqueID), m_buffer(buffer), m_transparency(transparency), m_width(width), m_height(height), m_url(url), m_paintFunc(paintFunc)
 {
 	assert(m_buffer);
 	assert(width > 0 && height > 0);
@@ -37,13 +37,6 @@ UnityBerkeliumWindow::~UnityBerkeliumWindow()
 * Other functions *
 ******************/
 
-RectVector UnityBerkeliumWindow::getDirtyRects()
-{
-	RectVector result = m_dirtyRects;
-	m_dirtyRects.clear();
-	return result;
-}
-
 
 /**************************************
 * Berkelium::WindowDelegate functions *
@@ -51,36 +44,93 @@ RectVector UnityBerkeliumWindow::getDirtyRects()
 
 void UnityBerkeliumWindow::onPaint(Berkelium::Window *pWindow, const unsigned char *sourceBuffer, const Berkelium::Rect &rect, int dx, int dy, const Berkelium::Rect &scrollRect)
 {
+#ifdef DEBUG
 	cerr << "[UnityBerkeliumWindow] onPaint called (window: " << pWindow << ")" << endl;
 	cerr << "  rect: (left=" << rect.left() << ", width=" << rect.width() << ", top=" << rect.top() << ", height=" << rect.height() << ")" << endl;
 	cerr << "  sourceBuffer: " << (void *) sourceBuffer << endl;
+#endif
 
-	// Add to the dirty rectangles vector
-	//! @todo How are we going to handle scrolling?
-	m_dirtyRects.push_back(rect);
-
-	//! @todo Scrolling
+	// Scrolling
 	if(dx != 0 || dy != 0)
 	{
+#if 0
+		// scroll_rect contains the Rect we need to move
+		// First we figure out where the the data is moved to by translating it
+		//Berkelium::Rect scrolled_rect = scrollRect.translate(-dx, -dy);
+		Berkelium::Rect scrolled_rect = scrollRect;
+		scrolled_rect.mLeft -= dx;
+		scrolled_rect.mTop -= dy;
+
+		// Next we figure out where they intersect, giving the scrolled
+		// region
+		Berkelium::Rect scrolled_shared_rect = scrollRect.intersect(scrolled_rect);
+
+		// Only do scrolling if they have non-zero intersection
+		if(scrolled_shared_rect.width() > 0 && scrolled_shared_rect.height() > 0)
+		{
+			// And the scroll is performed by moving shared_rect by (dx,dy)
+			//Berkelium::Rect shared_rect = scrolled_shared_rect.translate(dx, dy);
+			Berkelium::Rect shared_rect = scrolled_shared_rect;
+			shared_rect.mLeft += dx;
+			shared_rect.mTop += dy;
+
+			for(int y = scrolled_shared_rect.top(); y < shared_rect.bottom(); ++y)
+			{
+				::memcpy(
+					m_buffer + y * m_width * 4 /*+ scrolled_shared_rect.left() * 4*/,
+					m_buffer + ((scrolled_shared_rect.top() + y) * m_width /*+ scrolled_shared_rect.left()*/) * 4,
+					scrolled_shared_rect.width() * 4
+				);
+			}
+
+			// Copy the data out of the texture
+			/*size_t scrollBuffSize = scrolled_shared_rect.width() * scrolled_shared_rect.height() * 4;
+			unsigned char *scrollBuffer = new unsigned char[scrollBuffSize];
+			
+			for(int line = 0; line < scrolled_shared_rect.height(); ++line)
+			{
+				::memcpy(
+					scrollBuffer + line * scrolled_shared_rect.width() * 4,
+
+			}*/
+#if 0
+			glGetTexImage(
+				GL_TEXTURE_2D, 0,
+				GL_BGRA, GL_UNSIGNED_BYTE,
+				scroll_buffer
+				);
+
+			// Annoyingly, OpenGL doesn't provide convenient primitives, so
+			// we manually copy out the region to the beginning of the
+			// buffer
+			int wid = scrolled_shared_rect.width();
+			int hig = scrolled_shared_rect.height();
+			for(int jj = 0; jj < hig; jj++) {
+				memcpy(
+					scroll_buffer + (jj*wid * 4),
+					scroll_buffer + ((scrolled_shared_rect.top()+jj)*dest_texture_width + scrolled_shared_rect.left()) * 4,
+					wid*4
+					);
+			}
+
+			// And finally, we push it back into the texture in the right
+			// location
+			glTexSubImage2D(GL_TEXTURE_2D, 0,
+				shared_rect.left(), shared_rect.top(),
+				shared_rect.width(), shared_rect.height(),
+				GL_BGRA, GL_UNSIGNED_BYTE, scroll_buffer
+				);
+#endif
+		}
+#endif
 	}
 
 	// Apply the dirty rectangle
-	for(int x = rect.left(); x < rect.right(); ++x)
-	{
-		for(int y = rect.top(); y < rect.bottom(); ++y)
-		{
-			int srcIdx = (y - rect.top()) * rect.width() + (x - rect.left());
-			int idx = y * m_width + x;
-			
-			// Note: we convert from BGRA bytes to RGBA floats. RGB24 textures in Unity are still 32bit in memory.
-			m_buffer[idx * 4 + 0] = sourceBuffer[srcIdx * 4 + 2] / 255.0f; // R
-			m_buffer[idx * 4 + 1] = sourceBuffer[srcIdx * 4 + 1] / 255.0f; // G
-			m_buffer[idx * 4 + 2] = sourceBuffer[srcIdx * 4 + 0] / 255.0f; // B
-			
-			if(m_transparency)
-				m_buffer[idx * 4 + 3] = sourceBuffer[srcIdx * 4 + 3] / 255.0f; // A
-		}
-	}
+	convertColors(rect, sourceBuffer);
+
+	// Call the paint callback
+	m_lastDirtyRect = rect;
+	m_paintFunc(/*rect.left(), rect.top(), rect.width(), rect.height()*/);
 }
 
 void UnityBerkeliumWindow::onAddressBarChanged(Berkelium::Window *win, const char* newURL, size_t newURLSize)
@@ -178,3 +228,21 @@ void UnityBerkeliumWindow::onShowContextMenu(Berkelium::Window *win, const Berke
 * Protected functions *
 **********************/
 
+void UnityBerkeliumWindow::convertColors(const Berkelium::Rect &rect, const unsigned char *sourceBuffer)
+{
+	// Note: we convert from BGRA bytes to RGBA floats. RGB24 textures in Unity are still 32bit in memory.
+	for(int x = rect.left(); x < rect.right(); ++x)
+	{
+		for(int y = rect.top(); y < rect.bottom(); ++y)
+		{
+			int idx = (y - rect.top()) * rect.width() + (x - rect.left());
+
+			m_buffer[idx * 4 + 0] = sourceBuffer[idx * 4 + 2] / 255.0f; // R
+			m_buffer[idx * 4 + 1] = sourceBuffer[idx * 4 + 1] / 255.0f; // G
+			m_buffer[idx * 4 + 2] = sourceBuffer[idx * 4 + 0] / 255.0f; // B
+			
+			if(m_transparency)
+				m_buffer[idx * 4 + 3] = sourceBuffer[idx * 4 + 3] / 255.0f; // A
+		}
+	}
+}

@@ -26,10 +26,16 @@ public class UnityBerkelium : MonoBehaviour {
 	// A rectangle
 	struct Rect
 	{
-		int top, left;
-		int width, height;
+		public int top, left;
+		public int width, height;
 	}
 	
+	// The delegate that is called when there is a dirty rectangle
+	// Note: Unity crashes when using a struct or more than two parameters
+	//delegate void PaintFunc(Rect rect);
+	delegate void PaintFunc(/*int left, int top, int width, int height*/);
+	private PaintFunc m_paintFunc;
+
 	// Imported functions
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_init();
@@ -41,21 +47,14 @@ public class UnityBerkelium : MonoBehaviour {
 	private static extern void Berkelium_update();
     
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, bool transparency, int width, int height, string url);
+	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, bool transparency, int width, int height, string url, PaintFunc paintFunc);
 
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_destroy(int windowID);
 	
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern bool Berkelium_Window_isDirty(int windowID);
-
-	// TEMP
-	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern void Berkelium_Window_clearDirty(int windowID);
-
-	/*[DllImport ("UnityBerkeliumPlugin")]
-	private static extern Rect[] Berkelium_Window_getUpdates(int windowID);*/
-
+	private static extern Rect Berkelium_Window_getLastDirtyRect(int windowID);
+	
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_mouseDown(int windowID, int button);
 
@@ -74,7 +73,6 @@ public class UnityBerkelium : MonoBehaviour {
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_executeJavascript(int windowID, string javascript);
 	
-
     void Start () {
 		
 		// Initialize Berkelium
@@ -122,10 +120,22 @@ public class UnityBerkelium : MonoBehaviour {
             Debug.Log("Game object has no renderer or gui texture to assign the generated texture to!");
         }
 		
+		// Paint callback
+		m_paintFunc = new PaintFunc(this.Paint);
+		
 		// Create new web window
-		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), transparency, width,height, url);
+		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), transparency, width,height, url, m_paintFunc);
 		print("Created new web window: " + m_TextureID);
     }
+	
+	void Paint(/*int left, int top, int width, int height*/)
+	{
+		Rect rect = Berkelium_Window_getLastDirtyRect(m_TextureID);
+
+		//print("Painting rect: (" + rect.left + ", " + rect.top + ", " + rect.width + ", " + rect.height + ")");
+		m_Texture.SetPixels(rect.left, rect.top, rect.width, rect.height, m_Pixels, 0);
+		m_Texture.Apply();
+	}
     
     void OnDisable() {
 		// Destroy the web window
@@ -144,18 +154,6 @@ public class UnityBerkelium : MonoBehaviour {
 		// Update Berkelium
 		// TODO This only has to be done once in stead of per object
 		Berkelium_update();
-	
-		// Apply the changed pixels
-		// TODO Ask Berkelium for the dirty rectangle and only set those pixels
-		if(Berkelium_Window_isDirty(m_TextureID))
-		{
-			// TEMP Make sure the dirty rectangles are cleared
-			Berkelium_Window_clearDirty(m_TextureID);
-			
-			m_Texture.SetPixels (m_Pixels, 0);
-			m_Texture.Apply ();
-			//print("Updated texture");
-		}
     }
 	
 	void OnMouseEnter()

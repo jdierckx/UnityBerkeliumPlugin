@@ -15,24 +15,24 @@
 #include <berkelium/Window.hpp>
 #include <berkelium/WindowDelegate.hpp>
 
-// Forward declarations
-typedef std::vector<Berkelium::Rect> RectVector;
-
 /** Class Description */
 class UnityBerkeliumWindow: Berkelium::WindowDelegate
 {
 public:
+	// The callback function that is called when a paint event occurs
+	// Note: Unity crashes when providing a struct or more than two standard parameters
+	//typedef void (*PaintFunc)(Berkelium::Rect);
+	typedef void (*PaintFunc)(/*int left, int top, int width, int height*/);
+
 	// Constructors and destructor
-	UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url);
+	UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url, PaintFunc paintFunc);
 	virtual ~UnityBerkeliumWindow();
 
 	// Information
 	Berkelium::Window *getBerkeliumWindow() const { return m_pWindow; }
 
-	// Dirty rectangles
-	bool isDirty() const { return !m_dirtyRects.empty(); }
-	void clearDirty() { m_dirtyRects.clear(); }
-	RectVector getDirtyRects();
+	// Current paint info
+	const Berkelium::Rect &getLastDirtyRect() const { return m_lastDirtyRect; }
 
 protected:
 	// Berkelium::WindowDelegate functions
@@ -56,6 +56,9 @@ protected:
 	virtual void onCursorUpdated(const Berkelium::Cursor& newCursor);
 	virtual void onShowContextMenu(Berkelium::Window *win, const Berkelium::ContextMenuEventArgs& args);
 
+	// Protected functions
+	void convertColors(const Berkelium::Rect &rect, const unsigned char *sourceBuffer);
+
 	// Member variables
 	Berkelium::Window *m_pWindow;
 	int m_id;
@@ -64,7 +67,8 @@ protected:
 	int m_width, m_height;
 	string m_url;
 
-	RectVector m_dirtyRects;
+	PaintFunc m_paintFunc;
+	Berkelium::Rect m_lastDirtyRect;
 };
 
 #endif // UNITYBERKELIUMWINDOW_H
