@@ -75,7 +75,7 @@ PLUGIN_API void Berkelium_update()
 * Window-specific functions *
 ****************************/
 
-PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, int width, int height, char *url)
+PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transparency, int width, int height, char *url)
 {
 	if(windows.find(uniqueID) != windows.end())
 	{
@@ -83,7 +83,7 @@ PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, int width, 
 		return false;
 	}
 
-	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, width, height, url);
+	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, transparency, width, height, url);
 
 	cerr << "Berkelium window created: " << pWindow << " (size=" << width << ", " << height << "; url=" << url << ")" << endl;
 	windows[uniqueID] = pWindow;

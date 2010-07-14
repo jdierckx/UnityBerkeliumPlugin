@@ -23,7 +23,7 @@ class UnityBerkeliumWindow: Berkelium::WindowDelegate
 {
 public:
 	// Constructors and destructor
-	UnityBerkeliumWindow(int uniqueID, float *buffer, int width, int height, const string &url);
+	UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url);
 	virtual ~UnityBerkeliumWindow();
 
 	// Information
@@ -60,6 +60,7 @@ protected:
 	Berkelium::Window *m_pWindow;
 	int m_id;
 	float *m_buffer;
+	bool m_transparency;
 	int m_width, m_height;
 	string m_url;
 

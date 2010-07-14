@@ -16,6 +16,7 @@ public class UnityBerkelium : MonoBehaviour {
     public int height = 512;
 	public string url = "http://www.google.com";
 	public bool interactive = true;
+	public bool transparency = false;
 	
     private Texture2D m_Texture;
     private Color[] m_Pixels;
@@ -40,7 +41,7 @@ public class UnityBerkelium : MonoBehaviour {
 	private static extern void Berkelium_update();
     
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, int width, int height, string url);
+	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, bool transparency, int width, int height, string url);
 
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_destroy(int windowID);
@@ -79,8 +80,10 @@ public class UnityBerkelium : MonoBehaviour {
 		// Initialize Berkelium
 		Berkelium_init();
 		
-        // Create the texture that will represent the website (with transparency and without mipmaps)
-        m_Texture = new Texture2D (width, height, TextureFormat.ARGB32, false);
+        // Create the texture that will represent the website (with optional transparency and without mipmaps)
+		TextureFormat texFormat = transparency ? TextureFormat.ARGB32 : TextureFormat.RGB24;
+        m_Texture = new Texture2D (width, height, texFormat, false);
+		
         // Create the pixel array for the plugin to write into at startup    
         m_Pixels = m_Texture.GetPixels (0);
         // "pin" the array in memory, so we can pass direct pointer to it's data to the plugin,
@@ -99,6 +102,12 @@ public class UnityBerkelium : MonoBehaviour {
 		{
             renderer.material.mainTexture = m_Texture;
 			
+			// Transparency?
+			if(transparency)
+				renderer.material.shader = Shader.Find("Transparent/Diffuse");
+			else
+				renderer.material.shader = Shader.Find("Diffuse");
+			
 			// The texture has to be flipped
 			renderer.material.mainTextureScale = new Vector2(1,-1);
 		}
@@ -114,7 +123,7 @@ public class UnityBerkelium : MonoBehaviour {
         }
 		
 		// Create new web window
-		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), width,height, url);
+		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), transparency, width,height, url);
 		print("Created new web window: " + m_TextureID);
     }
     

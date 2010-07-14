@@ -14,14 +14,15 @@
 * Constructors and destructor *
 ******************************/
 
-UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, int width, int height, const string &url)
-: m_id(uniqueID), m_buffer(buffer), m_width(width), m_height(height), m_url(url)
+UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url)
+: m_id(uniqueID), m_buffer(buffer), m_transparency(transparency), m_width(width), m_height(height), m_url(url)
 {
 	assert(m_buffer);
 	assert(width > 0 && height > 0);
 
 	m_pWindow = Berkelium::Window::create();
 	m_pWindow->setDelegate(this);
+	m_pWindow->setTransparent(transparency);
 	m_pWindow->resize(width, height);
 	m_pWindow->navigateTo(url.data(), url.length());
 }
@@ -63,23 +64,23 @@ void UnityBerkeliumWindow::onPaint(Berkelium::Window *pWindow, const unsigned ch
 	{
 	}
 
-#if 1
 	// Apply the dirty rectangle
 	for(int x = rect.left(); x < rect.right(); ++x)
 	{
 		for(int y = rect.top(); y < rect.bottom(); ++y)
 		{
 			int srcIdx = (y - rect.top()) * rect.width() + (x - rect.left());
-			//int idx = x * m_height + y;
 			int idx = y * m_width + x;
 			
+			// Note: we convert from BGRA bytes to RGBA floats. RGB24 textures in Unity are still 32bit in memory.
 			m_buffer[idx * 4 + 0] = sourceBuffer[srcIdx * 4 + 2] / 255.0f; // R
 			m_buffer[idx * 4 + 1] = sourceBuffer[srcIdx * 4 + 1] / 255.0f; // G
 			m_buffer[idx * 4 + 2] = sourceBuffer[srcIdx * 4 + 0] / 255.0f; // B
-			m_buffer[idx * 4 + 3] = sourceBuffer[srcIdx * 4 + 3] / 255.0f; // A
+			
+			if(m_transparency)
+				m_buffer[idx * 4 + 3] = sourceBuffer[srcIdx * 4 + 3] / 255.0f; // A
 		}
 	}
-#endif
 }
 
 void UnityBerkeliumWindow::onAddressBarChanged(Berkelium::Window *win, const char* newURL, size_t newURLSize)
