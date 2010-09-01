@@ -33,6 +33,7 @@
 #ifndef _BERKELIUM_HPP_
 #define _BERKELIUM_HPP_
 #include "berkelium/Platform.hpp"
+#include "berkelium/WeakString.hpp"
 namespace sandbox {
 class BrokerServices;
 class TargetServices;
@@ -42,12 +43,22 @@ enum DepEnforcement;
 }
 namespace Berkelium {
 
+/** May be implemented to handle global errors gracefully.
+ */
+class BERKELIUM_EXPORT ErrorDelegate {
+public:
+    virtual ~ErrorDelegate() {}
+};
+
 /* TODO: Allow forkedProcessHook to be called without requiring the
    library to be initialized/in memory (unless this is a sub-process).
    i.e. an inline function that first searches for "--type=" in argv,
    then uses dlopen or GetProcAddress.
 */
 
+/** Called by child processes.
+ * Should only ever be called from subprocess.cpp (berkelium.exe).
+ */
 #ifdef _WIN32
 void BERKELIUM_EXPORT forkedProcessHook(
     sandbox::BrokerServices* (*ptrGetBrokerServices)(),
@@ -57,12 +68,29 @@ void BERKELIUM_EXPORT forkedProcessHook(
 void BERKELIUM_EXPORT forkedProcessHook(int argc, char **argv);
 #endif
 
-void BERKELIUM_EXPORT init();
+/** Iniitialize berkelium's global object.
+ *  \param homeDirectory  Just like Chrome's --user-data-dir command line flag.
+ *    If homeDirectory is null or empty, creates a temporary data directory.
+ */
+void BERKELIUM_EXPORT init(FileString homeDirectory);
+
+/** Destroys Berkelium and attempts to free as much memory as possible.
+ *  Note: You must destroy all Window and Context objects before calling
+ *  Berkelium::destroy()!
+ */
 void BERKELIUM_EXPORT destroy();
 
-void BERKELIUM_EXPORT update();
+void BERKELIUM_EXPORT setErrorHandler(ErrorDelegate * errorHandler);
 
-int BERKELIUM_EXPORT renderToBuffer(char *buffer, int width, int height);
+/** Runs the message loop until all pending messages are processed.
+ *  Must be called from the same thread as all other Berkelium functions,
+ *  usually your program's main (UI) thread.
+ *  For now, you have to poll to receive updates without blocking indefinitely.
+ *
+ *  Your WindowDelegate's should only receive callbacks synchronously with
+ *  this call to update.
+ */
+void BERKELIUM_EXPORT update();
 
 }
 

@@ -36,19 +36,29 @@
 namespace Berkelium {
 
 struct Rect {
-    int mTop;
     int mLeft;
+    int mTop;
     int mWidth;
     int mHeight;
 
-    int top() const { return mTop; }
-    int left() const { return mLeft; }
-    int width() const { return mWidth; }
-    int height() const { return mHeight; }
-    int right() const { return mLeft + mWidth; }
-    int bottom() const { return mTop + mHeight; }
+    inline int y() const { return mTop; }
+    inline int x() const { return mLeft; }
+    inline int top() const { return mTop; }
+    inline int left() const { return mLeft; }
+    inline int width() const { return mWidth; }
+    inline int height() const { return mHeight; }
+    inline int right() const { return mLeft + mWidth; }
+    inline int bottom() const { return mTop + mHeight; }
 
-    bool contains(int x, int y) const {
+    template <class T>
+    inline void setFromRect(const T&sourceRect) {
+        mLeft = sourceRect.x();
+        mTop = sourceRect.y();
+        mWidth = sourceRect.width();
+        mHeight = sourceRect.height();
+    }
+
+    inline bool contains(int x, int y) const {
         return (x >= left() && x < right() &&
                 y >= top() && y < bottom());
     }

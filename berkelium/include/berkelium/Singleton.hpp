@@ -38,10 +38,9 @@ namespace Berkelium {
 template <class T> class AutoSingleton {
     static std::auto_ptr<T>sInstance;
 public:
-    static T&getSingleton() {
+    static T& getSingleton() {
         if (sInstance.get()==NULL)  {
-            std::auto_ptr<T> tmp(new T);
-            sInstance = tmp;
+            throw std::exception();
         }
         return *static_cast<T*>(sInstance.get());
     }

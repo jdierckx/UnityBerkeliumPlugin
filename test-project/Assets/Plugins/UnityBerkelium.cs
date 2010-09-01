@@ -23,18 +23,26 @@ public class UnityBerkelium : MonoBehaviour {
     private GCHandle m_PixelsHandle;
 	private int m_TextureID;
         
-	// A rectangle
+	// A rectangle (same structure as the Berkelium Rect)
 	struct Rect
 	{
-		public int top, left;
+		public int left, top;
 		public int width, height;
 	}
 	
 	// The delegate that is called when there is a dirty rectangle
 	// Note: Unity crashes when using a struct or more than two parameters
-	//delegate void PaintFunc(Rect rect);
-	delegate void PaintFunc(/*int left, int top, int width, int height*/);
-	private PaintFunc m_paintFunc;
+	//delegate void SetPixelsFunc(Rect rect);
+	delegate void SetPixelsFunc(/*int left, int top, int width, int height*/);
+	private SetPixelsFunc m_setPixelsFunc;
+	
+	// The delgate that is called when all dirty rectangles can be applied
+	delegate void ApplyTextureFunc();
+	private ApplyTextureFunc m_applyTextureFunc;
+	
+	// The delegate that is called when javascript calls to Unity
+	delegate void ExternalHostFunc(/*string message*/);
+	private ExternalHostFunc m_externalHostFunc;
 
 	// Imported functions
 	[DllImport ("UnityBerkeliumPlugin")]
@@ -47,10 +55,13 @@ public class UnityBerkelium : MonoBehaviour {
 	private static extern void Berkelium_update();
     
 	[DllImport ("UnityBerkeliumPlugin")]
-	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, bool transparency, int width, int height, string url, PaintFunc paintFunc);
+	private static extern int Berkelium_Window_create(int windowID, IntPtr colors, bool transparency, int width, int height, string url);
 
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_destroy(int windowID);
+	
+	[DllImport ("UnityBerkeliumPlugin")]
+	private static extern void Berkelium_Window_setPaintFunctions(int windowID, SetPixelsFunc setPixelsFunc, ApplyTextureFunc applyTextureFunc);
 	
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern Rect Berkelium_Window_getLastDirtyRect(int windowID);
@@ -73,21 +84,27 @@ public class UnityBerkelium : MonoBehaviour {
 	[DllImport ("UnityBerkeliumPlugin")]
 	private static extern void Berkelium_Window_executeJavascript(int windowID, string javascript);
 	
-    void Start () {
-		
+	[DllImport ("UnityBerkeliumPlugin")]
+	private static extern void Berkelium_Window_setExternalHostCallback(int windowID, ExternalHostFunc callback);
+	
+	[DllImport ("UnityBerkeliumPlugin")]
+	private static extern IntPtr Berkelium_Window_getLastExternalHostMessage(int windowID);
+	
+    void Start ()
+	{
 		// Initialize Berkelium
 		Berkelium_init();
 		
-        // Create the texture that will represent the website (with optional transparency and without mipmaps)
+		// Create the texture that will represent the website (with optional transparency and without mipmaps)
 		TextureFormat texFormat = transparency ? TextureFormat.ARGB32 : TextureFormat.RGB24;
-        m_Texture = new Texture2D (width, height, texFormat, false);
-		
-        // Create the pixel array for the plugin to write into at startup    
-        m_Pixels = m_Texture.GetPixels (0);
-        // "pin" the array in memory, so we can pass direct pointer to it's data to the plugin,
-        // without costly marshaling of array of structures.
-        m_PixelsHandle = GCHandle.Alloc(m_Pixels, GCHandleType.Pinned);
-		
+		m_Texture = new Texture2D (width, height, texFormat, false);
+
+		// Create the pixel array for the plugin to write into at startup    
+		m_Pixels = m_Texture.GetPixels (0);
+		// "pin" the array in memory, so we can pass direct pointer to it's data to the plugin,
+		// without costly marshaling of array of structures.
+		m_PixelsHandle = GCHandle.Alloc(m_Pixels, GCHandleType.Pinned);
+
 		// Save the texture ID
 		m_TextureID = m_Texture.GetInstanceID();
 		
@@ -95,10 +112,10 @@ public class UnityBerkelium : MonoBehaviour {
 		m_Texture.filterMode = FilterMode.Trilinear;
 		m_Texture.anisoLevel = 2;
 
-        // Assign texture to the renderer
-        if (renderer)
+		// Assign texture to the renderer
+		if (renderer)
 		{
-            renderer.material.mainTexture = m_Texture;
+			renderer.material.mainTexture = m_Texture;
 			
 			// Transparency?
 			if(transparency)
@@ -109,32 +126,48 @@ public class UnityBerkelium : MonoBehaviour {
 			// The texture has to be flipped
 			renderer.material.mainTextureScale = new Vector2(1,-1);
 		}
-        // or gui texture
-        else if (GetComponent(typeof(GUITexture)))
-        {
-            GUITexture gui = GetComponent(typeof(GUITexture)) as GUITexture;
-            gui.texture = m_Texture;
-        }
-        else
-        {
-            Debug.Log("Game object has no renderer or gui texture to assign the generated texture to!");
-        }
-		
-		// Paint callback
-		m_paintFunc = new PaintFunc(this.Paint);
+		// or gui texture
+		else if (GetComponent(typeof(GUITexture)))
+		{
+			GUITexture gui = GetComponent(typeof(GUITexture)) as GUITexture;
+			gui.texture = m_Texture;
+		}
+		else
+		{
+			Debug.Log("Game object has no renderer or gui texture to assign the generated texture to!");
+		}
 		
 		// Create new web window
-		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), transparency, width,height, url, m_paintFunc);
+		Berkelium_Window_create(m_TextureID, m_PixelsHandle.AddrOfPinnedObject(), transparency, width,height, url);
 		print("Created new web window: " + m_TextureID);
+		
+		// Paint callbacks
+		m_setPixelsFunc = new SetPixelsFunc(this.SetPixels);
+		m_applyTextureFunc = new ApplyTextureFunc(this.ApplyTexture);
+		Berkelium_Window_setPaintFunctions(m_TextureID, m_setPixelsFunc, m_applyTextureFunc);
+		
+		// Set the external host callback (for calling Unity functions from javascript)
+		m_externalHostFunc = new ExternalHostFunc(this.onExternalHost);
+		Berkelium_Window_setExternalHostCallback(m_TextureID, m_externalHostFunc);
     }
 	
-	void Paint(/*int left, int top, int width, int height*/)
+	void SetPixels(/*int left, int top, int width, int height*/)
 	{
 		Rect rect = Berkelium_Window_getLastDirtyRect(m_TextureID);
-
 		//print("Painting rect: (" + rect.left + ", " + rect.top + ", " + rect.width + ", " + rect.height + ")");
 		m_Texture.SetPixels(rect.left, rect.top, rect.width, rect.height, m_Pixels, 0);
+	}
+	
+	void ApplyTexture()
+	{
+		//print("Applying texture");
 		m_Texture.Apply();
+	}
+	
+	void onExternalHost(/*string message*/)
+	{
+		string message = Marshal.PtrToStringUni(Berkelium_Window_getLastExternalHostMessage(m_TextureID));
+		print("Message from javascript: " + message);
 	}
     
     void OnDisable() {
@@ -148,9 +181,8 @@ public class UnityBerkelium : MonoBehaviour {
 		Berkelium_destroy();
     }
 
-    // Now we can simply call UpdateTexture which gets routed directly into the plugin
-    void Update () {
-		
+    void Update ()
+	{
 		// Update Berkelium
 		// TODO This only has to be done once in stead of per object
 		Berkelium_update();
@@ -238,6 +270,13 @@ public class UnityBerkelium : MonoBehaviour {
 			Berkelium_Window_keyEvent(m_TextureID, pressed, mods, vk_code, scancode);
 			print("Key event: " + pressed + ", " + Event.current.keyCode);*/
 		}
+		
+		// A button to test javascript execution
+		/*if(GUI.Button(Rect(10,10,150,100), "Execute Javascript"))
+		{
+			print("Executing Javascript");
+			Berkelium_Window_executeJavascript(m_TextureID, "callMeBack()");
+		}*/
 	}
 	
 	int convertKeyCode(KeyCode keyCode)

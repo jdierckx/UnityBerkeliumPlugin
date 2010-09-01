@@ -14,13 +14,17 @@
 * Constructors and destructor *
 ******************************/
 
-UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url, PaintFunc paintFunc)
-: m_id(uniqueID), m_buffer(buffer), m_transparency(transparency), m_width(width), m_height(height), m_url(url), m_paintFunc(paintFunc)
+UnityBerkeliumWindow::UnityBerkeliumWindow(int uniqueID, float *buffer, bool transparency, int width, int height, const string &url)
+: m_id(uniqueID), m_buffer(buffer), m_transparency(transparency), m_width(width), m_height(height), m_url(url)
+, m_setPixelsFunc(0), m_applyTextureFunc(0), m_externalHostFunc(0)
 {
 	assert(m_buffer);
 	assert(width > 0 && height > 0);
 
-	m_pWindow = Berkelium::Window::create();
+	Berkelium::Context *pContext = Berkelium::Context::create();
+	m_pWindow = Berkelium::Window::create(pContext);
+	delete pContext;
+
 	m_pWindow->setDelegate(this);
 	m_pWindow->setTransparent(transparency);
 	m_pWindow->resize(width, height);
@@ -37,11 +41,23 @@ UnityBerkeliumWindow::~UnityBerkeliumWindow()
 * Other functions *
 ******************/
 
+void UnityBerkeliumWindow::setPaintFunctions(SetPixelsFunc setPixelsFunc, ApplyTextureFunc applyTextureFunc)
+{
+	m_setPixelsFunc = setPixelsFunc;
+	m_applyTextureFunc = applyTextureFunc;
+}
+
+void UnityBerkeliumWindow::setExternalHostCallback(ExternalHostFunc callback)
+{
+	m_externalHostFunc = callback;
+}
+
 
 /**************************************
 * Berkelium::WindowDelegate functions *
 **************************************/
 
+#if 0
 void UnityBerkeliumWindow::onPaint(Berkelium::Window *pWindow, const unsigned char *sourceBuffer, const Berkelium::Rect &rect, int dx, int dy, const Berkelium::Rect &scrollRect)
 {
 #ifdef DEBUG
@@ -132,15 +148,18 @@ void UnityBerkeliumWindow::onPaint(Berkelium::Window *pWindow, const unsigned ch
 	m_lastDirtyRect = rect;
 	m_paintFunc(/*rect.left(), rect.top(), rect.width(), rect.height()*/);
 }
+#endif
 
-void UnityBerkeliumWindow::onAddressBarChanged(Berkelium::Window *win, const char* newURL, size_t newURLSize)
+void UnityBerkeliumWindow::onAddressBarChanged(Berkelium::Window *win, Berkelium::URLString newURL)
 {
 	cerr << "[UnityBerkeliumWindow] onAddressBarChanged called (window: " << win << ")" << endl;
+	cerr << "  newURL: " << newURL << endl;
 }
 
-void UnityBerkeliumWindow::onStartLoading(Berkelium::Window *win, const char *newURL, size_t newURLSize)
+void UnityBerkeliumWindow::onStartLoading(Berkelium::Window *win, Berkelium::URLString newURL)
 {
 	cerr << "[UnityBerkeliumWindow] onStartLoading called (window: " << win << ")" << endl;
+	cerr << "  newURL: " << newURL << endl;
 }
 
 void UnityBerkeliumWindow::onLoad(Berkelium::Window *win)
@@ -148,19 +167,72 @@ void UnityBerkeliumWindow::onLoad(Berkelium::Window *win)
 	cerr << "[UnityBerkeliumWindow] onLoad called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onLoadError(Berkelium::Window *win, const char* error, size_t errorLength)
+void UnityBerkeliumWindow::onCrashedWorker(Berkelium::Window *win)
 {
-	cerr << "[UnityBerkeliumWindow] onLoadError called (window: " << win << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onCrashedWorker called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onBeforeUnload(Berkelium::Window *win, bool *proceed)
+void UnityBerkeliumWindow::onCrashedPlugin(Berkelium::Window *win, Berkelium::WideString pluginName)
 {
-	cerr << "[UnityBerkeliumWindow] onBeforeUnload called (window: " << win << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onCrashedPlugin called (window: " << win << ")" << endl;
+	wcerr << "  pluginName: " << pluginName << endl;
 }
 
-void UnityBerkeliumWindow::onCancelUnload(Berkelium::Window *win)
+void UnityBerkeliumWindow::onProvisionalLoadError(Berkelium::Window *win, Berkelium::URLString url, int errorCode, bool isMainFrame)
 {
-	cerr << "[UnityBerkeliumWindow] onCancelUnload called (window: " << win << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onProvisionalLoadError called (window: " << win << ")" << endl;
+	cerr << "  url: " << url << endl;
+	cerr << "  errorCode: " << errorCode << endl;
+	cerr << "  isMainFrame: " << (isMainFrame ? "yes" : "no") << endl;
+}
+
+void UnityBerkeliumWindow::onConsoleMessage(Berkelium::Window *win, Berkelium::WideString message, Berkelium::WideString sourceId, int line_no)
+{
+	cerr << "[UnityBerkeliumWindow] onConsoleMessage called (window: " << win << ")" << endl;
+	wcerr << "  message: " << message << endl;
+	wcerr << "  sourceId: " << sourceId << endl;
+	cerr << "  line_no: " << line_no << endl;
+}
+
+void UnityBerkeliumWindow::onScriptAlert(Berkelium::Window *win, Berkelium::WideString message, Berkelium::WideString defaultValue, Berkelium::URLString url, int flags, bool &success, Berkelium::WideString &value)
+{
+	cerr << "[UnityBerkeliumWindow] onScriptAlert called (window: " << win << ")" << endl;
+	wcerr << "  message: " << message << endl;
+	wcerr << "  defaultValue: " << defaultValue << endl;
+	cerr << "  url: " << url << endl;
+	cerr << "  flags: " << flags << endl;
+}
+
+void UnityBerkeliumWindow::freeLastScriptAlert(Berkelium::WideString lastValue)
+{
+	cerr << "[UnityBerkeliumWindow] freeLastScriptAlert called (lastValue: " << lastValue << ")" << endl;
+	wcerr << "  lastValue: " << lastValue << endl;
+}
+
+void UnityBerkeliumWindow::onNavigationRequested(Berkelium::Window *win, Berkelium::URLString newUrl, Berkelium::URLString referrer, bool isNewWindow, bool &cancelDefaultAction)
+{
+	cerr << "[UnityBerkeliumWindow] onNavigationRequested called (window: " << win << ")" << endl;
+	cerr << "  newUrl: " << newUrl << endl;
+	cerr << "  referrer: " << referrer << endl;
+	cerr << "  isNewWindow: " << (isNewWindow ? "yes" : "no") << endl;
+}
+
+void UnityBerkeliumWindow::onLoadingStateChanged(Berkelium::Window *win, bool isLoading)
+{
+	cerr << "[UnityBerkeliumWindow] onLoadingStateChanged called (window: " << win << ")" << endl;
+	cerr << "  isLoading: " << (isLoading? "yes" : "no") << endl;
+}
+
+void UnityBerkeliumWindow::onTitleChanged(Berkelium::Window *win, Berkelium::WideString title)
+{
+	cerr << "[UnityBerkeliumWindow] onTitleChanged called (window: " << win << ")" << endl;
+	wcerr << "  title: " << title << endl;
+}
+
+void UnityBerkeliumWindow::onTooltipChanged(Berkelium::Window *win, Berkelium::WideString text)
+{
+	cerr << "[UnityBerkeliumWindow] onTooltipChanged called (window: " << win << ")" << endl;
+	wcerr << "  tetx: " << text << endl;
 }
 
 void UnityBerkeliumWindow::onCrashed(Berkelium::Window *win)
@@ -178,44 +250,88 @@ void UnityBerkeliumWindow::onResponsive(Berkelium::Window *win)
 	cerr << "[UnityBerkeliumWindow] onResponsive called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onChromeSend(Berkelium::Window *win, Data message, const Data* content, size_t numContents)
+void UnityBerkeliumWindow::onExternalHost(Berkelium::Window *win, Berkelium::WideString message, Berkelium::URLString origin, Berkelium::URLString target)
 {
-	cerr << "[UnityBerkeliumWindow] onChromeSend called (window: " << win << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onExternalHost called (window: " << win << ")" << endl;
+	wcerr << "  message: " << message << endl;
+	cerr << "  origin: " << origin << endl;
+	cerr << "  target: " << target << endl;
+
+	if(m_externalHostFunc)
+	{
+		m_lastExternalHostMessage = std::wstring(message.data(), message.length());
+		m_externalHostFunc(/*message.data()*/);
+	}
 }
 
-void UnityBerkeliumWindow::onCreatedWindow(Berkelium::Window *win, Berkelium::Window *newWindow)
+void UnityBerkeliumWindow::onCreatedWindow(Berkelium::Window *win, Berkelium::Window *newWindow, const Berkelium::Rect &initialRect)
 {
 	cerr << "[UnityBerkeliumWindow] onCreatedWindow called (window: " << win << ")" << endl;
 }
 
+void UnityBerkeliumWindow::onPaint(Berkelium::Window *win, const unsigned char *sourceBuffer, const Berkelium::Rect &sourceBufferRect, size_t numCopyRects, const Berkelium::Rect *copyRects, int dx, int dy, const Berkelium::Rect &scrollRect)
+{
+#ifdef DEBUG
+	cerr << "[UnityBerkeliumWindow] onPaint called (window: " << win << ")" << endl;
+	cerr << "  sourceBuffer: " << (void *) sourceBuffer << endl;
+	cerr << "  sourceBufferRect: (left=" << sourceBufferRect.left() << ", width=" << sourceBufferRect.width() << ", top=" << sourceBufferRect.top() << ", height=" << sourceBufferRect.height() << ")" << endl;
+	cerr << "  num dirty rects: " << numCopyRects << endl;
+	for(size_t i = 0; i < numCopyRects; ++i)
+		cerr << "  rect " << i << ": (left=" << copyRects[i].left() << ", width=" << copyRects[i].width() << ", top=" << copyRects[i].top() << ", height=" << copyRects[i].height() << ")" << endl;
+#endif
+
+	//! @todo Handle Scrolling
+	if(dx != 0 || dy != 0)
+	{
+	}
+
+	// Apply the dirty rectangles
+	for(size_t i = 0; i < numCopyRects; ++i)
+	{
+		convertColors(copyRects[i], sourceBuffer);
+		m_lastDirtyRect = copyRects[i];
+
+		if(m_setPixelsFunc)
+			m_setPixelsFunc(/*rect.left(), rect.top(), rect.width(), rect.height()*/);
+	}
+
+	// Call the paint callback
+	if(m_applyTextureFunc)
+		m_applyTextureFunc();
+}
+
 void UnityBerkeliumWindow::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex)
 {
-	cerr << "[UnityBerkeliumWindow] onWidgetCreated called (widget: " << newWidget << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onWidgetCreated called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget)
+void UnityBerkeliumWindow::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *wid)
 {
-	cerr << "[UnityBerkeliumWindow] onWidgetDestroyed called (widget: " << newWidget << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onWidgetDestroyed called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *wid, int newWidth,int newHeight)
+void UnityBerkeliumWindow::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *wid, int newWidth, int newHeight)
 {
-	cerr << "[UnityBerkeliumWindow] onWidgetResize called (widget: " << wid << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onWidgetResize called (window: " << win << ")" << endl;
 }
 
 void UnityBerkeliumWindow::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *wid, int newX, int newY)
 {
-	cerr << "[UnityBerkeliumWindow] onWidgetMove called (widget: " << wid << ")" << endl;
+	cerr << "[UnityBerkeliumWindow] onWidgetMove called (window: " << win << ")" << endl;
 }
 
-void UnityBerkeliumWindow::onWidgetPaint(Berkelium::Window *win, Berkelium::Widget *wid, const unsigned char *sourceBuffer, const Berkelium::Rect &rect,int dx, int dy, const Berkelium::Rect &scrollRect)
+void UnityBerkeliumWindow::onWidgetPaint(Berkelium::Window *win, Berkelium::Widget *wid, const unsigned char *sourceBuffer, const Berkelium::Rect &sourceBufferRect, size_t numCopyRects, const Berkelium::Rect *copyRects, int dx, int dy, const Berkelium::Rect &scrollRect)
 {
-	cerr << "[UnityBerkeliumWindow] onWidgetPaint called (widget: " << wid << ")" << endl;
+#ifdef DEBUG
+	cerr << "[UnityBerkeliumWindow] onWidgetPaint called (window: " << win << ")" << endl;
+#endif
 }
 
-void UnityBerkeliumWindow::onCursorUpdated(const Berkelium::Cursor& newCursor)
+void UnityBerkeliumWindow::onCursorUpdated(Berkelium::Window *win, const Berkelium::Cursor& newCursor)
 {
-	cerr << "[UnityBerkeliumWindow] onCursorUpdated called" << endl;
+#ifdef DEBUG
+	cerr << "[UnityBerkeliumWindow] onCursorUpdated called (window: " << win << ")" << endl;
+#endif
 }
 
 void UnityBerkeliumWindow::onShowContextMenu(Berkelium::Window *win, const Berkelium::ContextMenuEventArgs& args)
@@ -235,7 +351,10 @@ void UnityBerkeliumWindow::convertColors(const Berkelium::Rect &rect, const unsi
 	{
 		for(int y = rect.top(); y < rect.bottom(); ++y)
 		{
+			// We copy to the beginning of the buffer
+			// (because we can't change the start address of the buffer we provide the Unity .SetPixels function
 			int idx = (y - rect.top()) * rect.width() + (x - rect.left());
+			//int idx = y * rect.width() + x;
 
 			m_buffer[idx * 4 + 0] = sourceBuffer[idx * 4 + 2] / 255.0f; // R
 			m_buffer[idx * 4 + 1] = sourceBuffer[idx * 4 + 1] / 255.0f; // G

@@ -39,16 +39,39 @@ class BrowsingInstance;
 namespace Berkelium {
 class ContextImpl;
 
+/** A context holds onto a reference counted profile object.
+ *  The Window class calls clone() on a context, so you can safely
+ *  destroy a Context after making all the Windows you want.
+ *
+ *  No functions currently exist for this object.
+ */
 class BERKELIUM_EXPORT Context {
   protected:
     Context();
 
 public:
+    /** Creates an all-new context with no shared state and a refcount of 1.
+     */
+    static Context* create();
 
+    /** Deletes this Context object, which decrements the refcount for the
+     *  underlying context data.
+     */
+    void destroy();
+
+    /** Deprecated destructor
+     *  \deprecated destroy()
+     */
     virtual ~Context();
-    virtual Context* clone()const=0;
-    virtual ContextImpl *getImpl()=0;
-    virtual const ContextImpl *getImpl()const=0;
+
+    /** Returns a new Context object which increments the refcount of
+     *  the internal context information. Called by Window::create.
+     */
+    virtual Context* clone() const = 0;
+
+
+    virtual ContextImpl* getImpl() = 0;
+    virtual const ContextImpl* getImpl() const = 0;
 };
 
 }

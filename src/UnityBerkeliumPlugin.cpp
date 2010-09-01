@@ -22,7 +22,13 @@ static WindowMap windows;
 UnityBerkeliumWindow *getWindow(int id)
 {
 	WindowMap::const_iterator it = windows.find(id);
-	return (it == windows.end()) ? 0 : it->second;
+	if(it == windows.end())
+	{
+		cerr << "Warning: no berkelium window found with ID " << id << "!" << endl;
+		return 0;
+	}
+
+	return it->second;
 }
 
 
@@ -34,11 +40,13 @@ PLUGIN_API void Berkelium_init()
 {
 	if(refCount == 0)
 	{
-		// Initialize the Berkelium engine
-		Berkelium::init();
-
 		// Redirect stderr to log file
 		::freopen(logFilename, "w", stderr);
+
+		// Initialize the Berkelium engine
+		cerr << "First reference to Berkelium initialized: initializing the library" << endl;
+		Berkelium::init(Berkelium::FileString::empty());
+		cerr << "... done initializing Berkelium" << endl;
 	}
 
 	++refCount;
@@ -50,6 +58,8 @@ PLUGIN_API void Berkelium_destroy()
 
 	if(refCount == 0)
 	{
+		cerr << "Last reference to Berkelium destroyed: destroying the library" << endl;
+
 		// Destroy the windows that still exist
 		for(WindowMap::iterator it = windows.begin(); it != windows.end(); ++it)
 			delete it->second;
@@ -57,6 +67,7 @@ PLUGIN_API void Berkelium_destroy()
 
 		// Close the berkelium backend
 		Berkelium::destroy();
+		cerr << "... done destroying Berkelium" << endl;
 
 		// Close the log file
 		fclose(stderr);
@@ -75,7 +86,7 @@ PLUGIN_API void Berkelium_update()
 * Window-specific functions *
 ****************************/
 
-PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transparency, int width, int height, char *url, UnityBerkeliumWindow::PaintFunc paintFunc)
+PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transparency, int width, int height, char *url)
 {
 	if(windows.find(uniqueID) != windows.end())
 	{
@@ -83,7 +94,7 @@ PLUGIN_API bool Berkelium_Window_create(int uniqueID, float *colors, bool transp
 		return false;
 	}
 
-	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, transparency, width, height, url, paintFunc);
+	UnityBerkeliumWindow *pWindow = new UnityBerkeliumWindow(uniqueID, colors, transparency, width, height, url);
 
 	cerr << "Berkelium window created: " << pWindow << " (size=" << width << ", " << height << "; url=" << url << ")" << endl;
 	windows[uniqueID] = pWindow;
@@ -98,7 +109,16 @@ PLUGIN_API void Berkelium_Window_destroy(int windowID)
 	{
 		delete it->second;
 		windows.erase(it);
+
+		cerr << "Berkelium window destroyed: " << windowID << endl;
 	}
+}
+
+PLUGIN_API void Berkelium_Window_setPaintFunctions(int windowID, UnityBerkeliumWindow::SetPixelsFunc setPixelsFunc, UnityBerkeliumWindow::ApplyTextureFunc applyTextureFunc)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		pWindow->setPaintFunctions(setPixelsFunc, applyTextureFunc);
 }
 
 // Note: we need this function because I can't get parameters in function pointers to work properly
@@ -109,8 +129,6 @@ PLUGIN_API Berkelium::Rect Berkelium_Window_getLastDirtyRect(int windowID)
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		result = pWindow->getLastDirtyRect();
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 
 	return result;
 }
@@ -120,8 +138,6 @@ PLUGIN_API void Berkelium_Window_mouseDown(int windowID, int button)
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->mouseButton(button, true);
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
 
 PLUGIN_API void Berkelium_Window_mouseUp(int windowID, int button)
@@ -129,8 +145,6 @@ PLUGIN_API void Berkelium_Window_mouseUp(int windowID, int button)
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->mouseButton(button, false);
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
 
 PLUGIN_API void Berkelium_Window_mouseMove(int windowID, int x, int y)
@@ -138,8 +152,6 @@ PLUGIN_API void Berkelium_Window_mouseMove(int windowID, int x, int y)
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->mouseMoved(x, y);
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
 
 PLUGIN_API void Berkelium_Window_textEvent(int windowID, wchar_t c)
@@ -147,8 +159,6 @@ PLUGIN_API void Berkelium_Window_textEvent(int windowID, wchar_t c)
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->textEvent(&c, 1);
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
 
 PLUGIN_API void Berkelium_Window_keyEvent(int windowID, bool pressed, int mods, int vk_code, int scancode)
@@ -156,9 +166,10 @@ PLUGIN_API void Berkelium_Window_keyEvent(int windowID, bool pressed, int mods, 
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->keyEvent(pressed, mods, vk_code, scancode);
-	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
 }
+
+
+//-- Javascript functionality --//
 
 /// Thanks to agentdm
 PLUGIN_API void Berkelium_Window_executeJavascript(int windowID, char* javaScript)
@@ -177,7 +188,23 @@ PLUGIN_API void Berkelium_Window_executeJavascript(int windowID, char* javaScrip
 	std::wcerr << "Javascript converted: " << wctStrJScript << endl;
 
 	if(pWindow)
-		pWindow->getBerkeliumWindow()->executeJavascript(wctStrJScript, scriptLength);
+		pWindow->getBerkeliumWindow()->executeJavascript(Berkelium::WideString::point_to(wctStrJScript, scriptLength));
+}
+
+
+PLUGIN_API void Berkelium_Window_setExternalHostCallback(int windowID, UnityBerkeliumWindow::ExternalHostFunc callback)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		pWindow->setExternalHostCallback(callback);
+}
+
+// TEMP This should be a parameter in the callback function
+PLUGIN_API const wchar_t *Berkelium_Window_getLastExternalHostMessage(int windowID)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		return pWindow->getLastExternalHostMessage().c_str();
 	else
-		cerr << "Warning: no berkelium window found with ID " << windowID << "!" << endl;
+		return L"";
 }

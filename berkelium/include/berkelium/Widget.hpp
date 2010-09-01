@@ -37,12 +37,30 @@
 
 namespace Berkelium {
 
+/** A widget is a rectangular canvas which can be painted to. A Widget
+ *  maintains its own focus state, and can accept input just like a Window.
+ *  Widgets have very limited use in practice--mostly just dropdowns.
+ */
 class BERKELIUM_EXPORT Widget {
 public:
+    /** Deprecated virtual destructor.
+     *  \deprecated Use the safer destroy() method instead.
+     */
     virtual ~Widget() {}
+
+    /** Safe destructor for widget. Should clean up all resources.
+     *  Note: WindowDelegate::onWidgetDestroyed will be called synchronously.
+     */
+    void destroy(); // defined in src/RenderWidget.cpp
+
+    /** Gets a unique id for this widget.
+     *  \returns the widget's routing id
+     */
+    virtual int getId() const = 0;
 
     virtual void focus()=0;
     virtual void unfocus()=0;
+    virtual bool hasFocus() const = 0;
 
     virtual void mouseMoved(int xPos, int yPos)=0;
     virtual void mouseButton(unsigned int buttonID, bool down)=0;

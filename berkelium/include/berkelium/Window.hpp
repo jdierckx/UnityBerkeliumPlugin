@@ -35,6 +35,7 @@
 
 #include <vector>
 
+#include "berkelium/WeakString.hpp"
 #include "berkelium/Context.hpp"
 #include "berkelium/Rect.hpp"
 
@@ -73,28 +74,35 @@ protected:
     /** Construct a completely uninitialized Window -- it will have no backing
      *  renderer or delegate and use a new Context.
      */
-    Window();
+    Window ();
     /** Construct a Window which uses the specified Context for rendering.
      *  \param otherContext an existing rendering Context to use
      */
     Window (const Context*otherContext);
 
 public:
-    /** Create a new Window with all default properties -- a zero sized window
-     *  and a default local web page.
-     */
-    static Window* create();
     /** Create a new Window with all default properties which uses an existing
      *  Context for rendering.  It will be zero sized and use a default local
      *  web page.
-     *  \param otherContext an existing context to use for rendering
+     *  \param context an existing context to use for rendering
      *  \returns a new Window or NULL on failure
      */
-    static Window* create(const Context&otherContext);
+    static Window* create (const Context * context);
 
+    /** Deletes this window object.
+     */
+    void destroy();
+
+    /** Deprecated virtual destructor.
+     *  \deprecated Use destroy() to avoid interference from custom allocators.
+     */
     virtual ~Window();
 
-    virtual Widget* getWidget() const=0; // could return NULL.
+    /** A Window should have a root widget object, unless the window crashed
+     *  or has never been navigated.
+     *  If such a widget exists, returns non-null.
+     */
+    virtual Widget* getWidget() const=0;
 
     /** Get the rendering context for this Window. */
     inline Context *getContext() const {
@@ -110,30 +118,26 @@ public:
         mDelegate = delegate;
     }
 
-    void appendWidget(Widget *wid) {
-        mWidgets.push_back(wid);
-    }
-    void removeWidget(Widget *wid) {
-        for (WidgetList::iterator it = mWidgets.begin();
-             it != backEnd();
-             ++it)
-        {
-            if (*it == wid) {
-                mWidgets.erase(it);
-                return;
-            }
-        }
-    }
+    /** loop from the backmost (usually obscured) widget to the
+     *  frontmost (focused) widget.
+     */
     BackToFrontIter backIter() const {
         return mWidgets.begin();
     }
+
+    /** Corresponding end() to compare against the backIter. */
     BackToFrontIter backEnd() const {
         return mWidgets.end();
     }
 
+    /** loop from the frontmost (focused) widget to the
+     *  backmost (usually obscured) widget.
+     */
     FrontToBackIter frontIter() const {
         return mWidgets.rbegin();
     }
+
+    /** Corresponding end() to compare against the frontIter. */
     FrontToBackIter frontEnd() const {
         return mWidgets.rend();
     }
@@ -148,9 +152,25 @@ public:
      */
     Widget *getWidgetAtPoint(int xPos, int yPos, bool returnRootIfOutside=false) const;
 
+    /** Gets an id for this window.
+     * \returns the RenderView's unique routing id.
+     */
+    virtual int getId() const = 0;
+
+    /** Sets the transparency flag for this Window. Note that the buffer will
+     * be BGRA regardless of transparency, but if the window is not set as
+     * transparent, the alpha channel should always be 1.
+     * Transparency defaults to false and must be enabled on each Window.
+     * \param istrans  Whether to enable a transparent background.
+     */
     virtual void setTransparent(bool istrans)=0;
 
+    /** Set the topmost Widget for this Window as focused.
+     */
     virtual void focus()=0;
+
+    /** Blurs all widgets on this Window.
+     */
     virtual void unfocus()=0;
 
     /** Inject a mouse movement event into the Window at the specified position.
@@ -186,34 +206,76 @@ public:
     virtual void keyEvent(bool pressed, int mods, int vk_code, int scancode)=0;
 
 
-    /** Resize the Window.
+    /** Resize the Window. You should receive an onPaint message as an
+     *  acknowledgement.
      *  \param width the new width
      *  \param height the new height
      */
     virtual void resize(int width, int height)=0;
 
+    /** Changes the zoom level of the page in fixed increments (same as
+     *  Ctrl--, Ctrl-0, and Ctrl-+ in most browsers.
+     * \param mode  -1 to zoom out, 0 to reset zoom, 1 to zoom in
+     */
+    virtual void adjustZoom (int mode)=0;
+
     /** Execute Javascript in the context of the Window. This is equivalent to
      *  executing Javascript in the address bar of a regular browser. The
      *  javascript is copied so the caller retains ownership of the string.
      *  \param javascript pointer to a string containing Javascript code
-     *  \param javascriptLength length of the Javascript string
      */
-    virtual void executeJavascript(const wchar_t* javascript, size_t javascriptLength)=0;
+    virtual void executeJavascript (WideString javascript) = 0;
 
-    /** Request navigation to a URL.  The URL string is copied so the caller
-     *  retains ownership of the string.
-     *  \param url pointer to an ASCII string containing a URL
-     *  \param urlLength the length of the URL string
+    /** Insert the given text as a STYLE element at the beginning of the
+     * document.
+     * \param css  Stylesheet content to insert.
+     * \param elementId  Can be empty, but if specified then it is used
+     * as the id for the newly inserted element (replacing an existing one
+     * with the same id, if any).
      */
-    virtual bool navigateTo(const char *url, size_t urlLength)=0;
+    virtual void insertCSS (WideString css, WideString elementId) = 0;
+
+    /** Request navigation to a URL. Depending on the url, this might not
+     *  cause an actual navigation.
+     *  \param url  URLString pointer to an ASCII URL.
+     */
+    virtual bool navigateTo(URLString url)=0;
+
+    /**
+     * Request navigation to a URL.  The URL string is copied so the caller
+     * retains ownership of the string.
+     * \deprecated Use navigateTo(URLString) instead
+     * \param url pointer to an ASCII string containing a URL
+     * \param url_length the length of the URL string
+     */
+    inline bool navigateTo(const char *url, size_t url_length) {
+        return navigateTo(URLString::point_to(url,url_length));
+    }
 
     /** Request that the page be reloaded. */
-    virtual void refresh()=0;
+    virtual void refresh() = 0;
+
+    /** Stop ongoing navigations. */
+    virtual void stop() = 0;
+
+    /** Goes back by one history item. */
+    virtual void goBack() = 0;
+
+    /** Goes forward by one history item. */
+    virtual void goForward() = 0;
+
+    /** True if you can go back at all (if back button should be enabled). */
+    virtual bool canGoBack() const = 0;
+
+    /** True if you can go forward (if forwrad button should be enabled). */
+    virtual bool canGoForward() const = 0;
 
     /** Cut the currently selected data to the clipboard. */
     virtual void cut()=0;
+
     /** Copy the currently selected data to the clipboard. */
     virtual void copy()=0;
+
     /** Paste the current clipboard contents to the current cursoor position in
      *  the Window.
      */
@@ -221,6 +283,7 @@ public:
 
     /** Request the last action be undone. */
     virtual void undo()=0;
+
     /** Request the last undone action be reperformed. */
     virtual void redo()=0;
 
@@ -229,6 +292,22 @@ public:
 
     /** Request all data be selected. */
     virtual void selectAll()=0;
+
+protected:
+    void appendWidget(Widget *wid) {
+        mWidgets.push_back(wid);
+    }
+    void removeWidget(Widget *wid) {
+        for (WidgetList::iterator it = mWidgets.begin();
+             it != backEnd();
+             ++it)
+        {
+            if (*it == wid) {
+                mWidgets.erase(it);
+                return;
+            }
+        }
+    }
 
 protected:
     Context *mContext;

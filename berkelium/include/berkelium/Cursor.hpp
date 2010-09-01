@@ -36,6 +36,7 @@
 #include "berkelium/Platform.hpp"
 
 #if BERKELIUM_PLATFORM == PLATFORM_WINDOWS
+#include <windows.h>
 #elif BERKELIUM_PLATFORM == PLATFORM_LINUX
 // FIXME this really only works for toolkit == gtk
 // We use alternate definitions since we can't properly forward
@@ -64,6 +65,7 @@ class WindowImpl;
 class BERKELIUM_EXPORT Cursor {
 public:
 #if BERKELIUM_PLATFORM == PLATFORM_WINDOWS
+  HCURSOR GetCursor() const;
 #elif BERKELIUM_PLATFORM == PLATFORM_LINUX
   GdkCursorEnum GetCursorType() const;
   GdkCursorPtr GetCustomCursor() const;
@@ -77,6 +79,9 @@ private:
     Cursor(); // Non-copyable
 
 #if BERKELIUM_PLATFORM == PLATFORM_WINDOWS
+    Cursor(const HCURSOR handle);
+
+    HCURSOR mHandle;
 #elif BERKELIUM_PLATFORM == PLATFORM_LINUX
     Cursor(const GdkCursorEnum& _type, GdkCursorPtr _cursor);
 
