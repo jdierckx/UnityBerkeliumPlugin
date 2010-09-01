@@ -1,0 +1,24 @@
+html, body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	
+	overflow: hidden;
+}
+
+/** Disable the blue selection color */
+::selection {
+	background: transparent;
+}
+
+#content {
+	/* Full-window */
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin: 0;
+	padding: 5px;
+}
