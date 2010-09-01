@@ -10,3 +10,8 @@
 2010-07-07:
 - Only update texture when it is dirty (still updating full texture)
 - Character input (no other keys yet)
+
+2010-09-01:
+- Updated to latest Berkelium version
+- Enter and backspace key input support
+- Support for javascript (both calling javascript from Unity and calling Unity from javascript)
