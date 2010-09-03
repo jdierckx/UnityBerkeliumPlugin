@@ -22,7 +22,12 @@ public class RenderWebsite : MonoBehaviour
 	private Color[] m_Pixels;
 	private GCHandle m_PixelsHandle;
 	private int m_TextureID;
-        
+	
+	private string javascript = "";
+	private string javascriptMessages = "";
+	private int numMessages = 0;
+	private Vector2 consolePos = Vector2.zero;
+	
 	private UnityBerkelium.SetPixelsFunc m_setPixelsFunc;
 	private UnityBerkelium.ApplyTextureFunc m_applyTextureFunc;
 	private UnityBerkelium.ExternalHostFunc m_externalHostFunc;
@@ -105,6 +110,11 @@ public class RenderWebsite : MonoBehaviour
 	{
 		string message = Marshal.PtrToStringUni(UnityBerkelium.Window.getLastExternalHostMessage(m_TextureID));
 		print("Message from javascript: " + message);
+		
+		// Add to the console
+		javascriptMessages += message + "\n";
+		++numMessages;
+		consolePos.y += 13;
 	}
     
     void OnDisable() {
@@ -116,6 +126,8 @@ public class RenderWebsite : MonoBehaviour
 		
 		// Destroy Berkelium
 		UnityBerkelium.destroy();
+		
+		print("Destroyed Berkelium");
     }
 
     void Update ()
@@ -154,7 +166,7 @@ public class RenderWebsite : MonoBehaviour
 		// Only when interactive is enabled
 		if(!interactive)
 			return;
-
+		
 		RaycastHit hit;
 		if (Physics.Raycast (Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
 		{
@@ -185,7 +197,8 @@ public class RenderWebsite : MonoBehaviour
 	
 	void OnGUI()
 	{
-		if(Event.current.isKey)
+		// Inject input into the page when the GUI doesn't have focus
+		if(Event.current.isKey && GUIUtility.keyboardControl == 0)
 		{
 			// Insert character
 			UnityBerkelium.Window.textEvent(m_TextureID, Event.current.character);
@@ -208,11 +221,59 @@ public class RenderWebsite : MonoBehaviour
 			print("Key event: " + pressed + ", " + Event.current.keyCode);*/
 		}
 		
-		// A button to test javascript execution
-		/*if(GUI.Button(Rect(10,10,150,100), "Execute Javascript"))
-		{
-			print("Executing Javascript");
-			Berkelium_Window_executeJavascript(m_TextureID, "callMeBack()");
-		}*/
+		// Steal focus from GUI when clicking outside it
+		if(Event.current.type == EventType.MouseDown)
+			GUIUtility.keyboardControl = 0;
+
+		// A text edit box to enter a URL
+		GUI.SetNextControlName("urlField");
+		url = GUI.TextField(new Rect(50, 10, Screen.width-100, 20), url);
+		
+		// Pressing enter while the text edit has focus changes the URL
+		if(Event.current.isKey && Event.current.keyCode == KeyCode.Return && GUI.GetNameOfFocusedControl () == "urlField")
+			navigateTo(url);
+		
+		// Clicking this button also changes the URL
+		if(GUI.Button(new Rect(Screen.width - 50, 10, 30, 20), "GO"))
+			navigateTo(url);
+		
+		// A text edit to run javascript
+		GUI.SetNextControlName("javascriptField");
+		javascript = GUI.TextField(new Rect(10, Screen.height - 140, Screen.width - 80, 20), javascript);
+		
+		// Pressing enter while the text edit has focus executes the javascript
+		if(Event.current.isKey && Event.current.keyCode == KeyCode.Return && GUI.GetNameOfFocusedControl () == "javascriptField")
+			executeJavascript(javascript);
+		
+		// Clicking this button also executes the javascript
+		if(GUI.Button(new Rect(Screen.width - 70, Screen.height - 140, 60, 20), "Execute"))
+			executeJavascript(javascript);
+		
+		// A console for javascript externalHost messages
+		int consoleHeight = 10 + numMessages * 13;
+		if(consoleHeight < 100)
+			consoleHeight = 100;
+		
+		consolePos = GUI.BeginScrollView(new Rect(10, Screen.height - 110, Screen.width - 20, 100), consolePos, new Rect(0,0, Screen.width - 40, consoleHeight));
+		GUI.Box(new Rect(0,0, Screen.width - 40, consoleHeight), javascriptMessages);
+		GUI.EndScrollView();
+	}
+	
+	void navigateTo(string url)
+	{
+		print("Changing url to " + url);
+		UnityBerkelium.Window.navigateTo(m_TextureID, url);
+		
+		// Steal focus from the GUI
+		GUIUtility.keyboardControl = 0;
+	}
+	
+	void executeJavascript(string javascript)
+	{
+		print("Executing Javascript: " + javascript);
+		UnityBerkelium.Window.executeJavascript(m_TextureID, javascript);
+		
+		// Steal focus from the GUI
+		GUIUtility.keyboardControl = 0;
 	}
 }
