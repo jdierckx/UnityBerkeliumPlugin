@@ -61,8 +61,12 @@ PLUGIN_API void Berkelium_destroy()
 		cerr << "Last reference to Berkelium destroyed: destroying the library" << endl;
 
 		// Destroy the windows that still exist
+		// Note: we update Berkelium after each destroy to ensure no messages are left in the message loop
 		for(WindowMap::iterator it = windows.begin(); it != windows.end(); ++it)
+		{
 			delete it->second;
+			Berkelium::update();
+		}
 		windows.clear();
 
 		// Close the berkelium backend
