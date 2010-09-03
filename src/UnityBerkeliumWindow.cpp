@@ -41,6 +41,11 @@ UnityBerkeliumWindow::~UnityBerkeliumWindow()
 * Other functions *
 ******************/
 
+void UnityBerkeliumWindow::navigateTo(const string &url)
+{
+	m_pWindow->navigateTo(url.data(), url.length());
+}
+
 void UnityBerkeliumWindow::setPaintFunctions(SetPixelsFunc setPixelsFunc, ApplyTextureFunc applyTextureFunc)
 {
 	m_setPixelsFunc = setPixelsFunc;

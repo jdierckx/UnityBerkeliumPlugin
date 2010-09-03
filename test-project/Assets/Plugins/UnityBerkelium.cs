@@ -48,6 +48,9 @@ public class UnityBerkelium
 		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_destroy")]
 		public static extern void destroy(int windowID);
 		
+		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_navigateTo")]
+		public static extern void navigateTo(int windowID, string url);
+		
 		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_setPaintFunctions")]
 		public static extern void setPaintFunctions(int windowID, SetPixelsFunc setPixelsFunc, ApplyTextureFunc applyTextureFunc);
 		

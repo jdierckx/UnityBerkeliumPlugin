@@ -36,6 +36,9 @@ public:
 	// Information
 	Berkelium::Window *getBerkeliumWindow() const { return m_pWindow; }
 
+	// Navigation
+	void navigateTo(const string &url);
+
 	// Callbacks
 	void setPaintFunctions(SetPixelsFunc setPixelsFunc, ApplyTextureFunc applyTextureFunc);
 	void setExternalHostCallback(ExternalHostFunc callback);

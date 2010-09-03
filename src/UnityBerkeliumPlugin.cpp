@@ -118,6 +118,13 @@ PLUGIN_API void Berkelium_Window_destroy(int windowID)
 	}
 }
 
+PLUGIN_API void Berkelium_Window_navigateTo(int windowID, char *url)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		pWindow->navigateTo(url);
+}
+
 PLUGIN_API void Berkelium_Window_setPaintFunctions(int windowID, UnityBerkeliumWindow::SetPixelsFunc setPixelsFunc, UnityBerkeliumWindow::ApplyTextureFunc applyTextureFunc)
 {
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
