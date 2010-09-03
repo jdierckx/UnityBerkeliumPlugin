@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Jeroen Dierckx - Expertise Centre for Digital Media. All Rights reserved.
-// This source code is developed for the flemish (Belgian) OSMA project (http://osma.phl.be/)
+// Part of this source code is developed for the flemish (Belgian) OSMA project (http://osma.phl.be/)
 //
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.

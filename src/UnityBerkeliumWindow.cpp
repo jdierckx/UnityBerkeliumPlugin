@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Jeroen Dierckx - Expertise Centre for Digital Media. All Rights reserved.
-// This source code is developed for the flemish (Belgian) OSMA project (http://osma.phl.be/)
+// Part of this source code is developed for the flemish (Belgian) OSMA project (http://osma.phl.be/)
 //
 // Contributors (Unity forum usernames): reissgrant, agentdm
 //
