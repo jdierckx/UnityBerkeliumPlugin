@@ -22,7 +22,7 @@ public class BerkeliumTestGUI : MonoBehaviour
     void Start ()
 	{
 		if(website == null)
-			website = (RenderWebsite) GetComponent(typeof(RenderWebsite));
+			website = GetComponent<RenderWebsite>();
     }
 
 	void OnExternalHost(string message)
