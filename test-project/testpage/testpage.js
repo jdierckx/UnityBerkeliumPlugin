@@ -8,6 +8,17 @@ function callExternalHost(func)
 	}
 }
 
+function callUnityFunction(func, args)
+{
+	var obj = {func: func, args: args};
+	callExternalHost(JSON.stringify(obj));
+}
+
+function callUnityFunctionTest()
+{
+	callUnityFunction('testFunction', {'param1' : 'value1', param2 : 'value2', 'param3' : 123, param4 : 456});
+}
+
 window.addEvent('domready', function()
 {
 	// Input test
