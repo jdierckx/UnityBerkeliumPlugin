@@ -137,12 +137,14 @@ public class RenderWebsite : MonoBehaviour
 		
         // Free the pinned array handle.
         m_PixelsHandle.Free();
-		
-		// Destroy Berkelium
-		UnityBerkelium.destroy();
-		
-		print("Destroyed Berkelium");
     }
+	
+	void OnApplicationQuit()
+	{
+		// Destroy Berkelium
+		//UnityBerkelium.destroy();
+		//print("Destroyed Berkelium");
+	}
 
     void Update ()
 	{
