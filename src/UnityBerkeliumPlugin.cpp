@@ -191,15 +191,16 @@ PLUGIN_API void Berkelium_Window_executeJavascript(int windowID, char* javaScrip
 	size_t scriptLength = ::strlen(javaScript);
 
 	// Convert to Wchar ( is there an easier way to do this? )
-	const int strlength = 100;
-	wchar_t wctStrJScript[strlength];
-	MultiByteToWideChar( CP_ACP, 0, javaScript, scriptLength, wctStrJScript, strlength);
+	wchar_t *wctStrJScript = new wchar_t[scriptLength + 1];
+	MultiByteToWideChar( CP_ACP, 0, javaScript, scriptLength, wctStrJScript, scriptLength);
 	wctStrJScript[scriptLength] = 0;
 
 	std::wcerr << "Javascript converted: " << wctStrJScript << endl;
 
 	if(pWindow)
 		pWindow->getBerkeliumWindow()->executeJavascript(Berkelium::WideString::point_to(wctStrJScript, scriptLength));
+
+	delete[] wctStrJScript;
 }
 
 
