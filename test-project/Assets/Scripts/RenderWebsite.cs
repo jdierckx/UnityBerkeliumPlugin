@@ -188,6 +188,9 @@ public class RenderWebsite : MonoBehaviour
 		{
 			int x = /*width -*/ (int) (hit.textureCoord.x * width);
 			int y = height - (int) (hit.textureCoord.y * height);
+			
+			// Focus the window
+			UnityBerkelium.Window.focus(m_TextureID);
 	
 			UnityBerkelium.Window.mouseMove(m_TextureID, x, y);
 			UnityBerkelium.Window.mouseDown(m_TextureID, 0);

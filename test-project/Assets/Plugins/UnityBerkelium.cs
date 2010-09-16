@@ -57,6 +57,12 @@ public class UnityBerkelium
 		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_getLastDirtyRect")]
 		public static extern Rect getLastDirtyRect(int windowID);
 		
+		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_focus")]
+		public static extern void focus(int windowID);
+		
+		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_unfocus")]
+		public static extern void unfocus(int windowID);
+		
 		[DllImport ("UnityBerkeliumPlugin", EntryPoint="Berkelium_Window_mouseDown")]
 		public static extern void mouseDown(int windowID, int button);
 

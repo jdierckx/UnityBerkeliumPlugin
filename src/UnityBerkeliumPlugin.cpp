@@ -144,6 +144,20 @@ PLUGIN_API Berkelium::Rect Berkelium_Window_getLastDirtyRect(int windowID)
 	return result;
 }
 
+PLUGIN_API void Berkelium_Window_focus(int windowID)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		pWindow->getBerkeliumWindow()->focus();
+}
+
+PLUGIN_API void Berkelium_Window_unfocus(int windowID)
+{
+	UnityBerkeliumWindow *pWindow = getWindow(windowID);
+	if(pWindow)
+		pWindow->getBerkeliumWindow()->unfocus();
+}
+
 PLUGIN_API void Berkelium_Window_mouseDown(int windowID, int button)
 {
 	UnityBerkeliumWindow *pWindow = getWindow(windowID);
